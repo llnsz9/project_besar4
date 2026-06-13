@@ -1,0 +1,3886 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Intelligence Creation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --purple: #7c3aed;
+            --pink: #ec4899;
+            --cyan: #06b6d4;
+            --green: #10b981;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --indigo: #6366f1;
+            --teal: #14b8a6;
+            --bg: #080812;
+            --bg-card: #111127;
+            --bg-card-2: #0d0d20;
+            --border: rgba(255, 255, 255, 0.07);
+            --border-bright: rgba(255, 255, 255, 0.15);
+            --muted: #6b7280;
+            --white: #f8fafc;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ============ SEQUENCE ANIMATION ============ */
+        #sequence-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #sequence-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .seq-scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+            animation: fadeInHint 1s ease 1.5s both;
+        }
+
+        .seq-scroll-hint span {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .seq-scroll-mouse {
+            width: 24px;
+            height: 38px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            padding-top: 6px;
+        }
+
+        .seq-scroll-mouse::before {
+            content: '';
+            width: 3px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
+            animation: scrollDot 1.5s ease infinite;
+        }
+
+        .seq-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--purple), var(--pink), var(--cyan));
+            width: 0%;
+            transition: width 0.1s linear;
+            z-index: 10;
+        }
+
+        #sequence-overlay.hidden {
+            animation: overlayFadeOut 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes overlayFadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.02);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(1.04);
+                pointer-events: none;
+            }
+        }
+
+        @keyframes fadeInHint {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes scrollDot {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translateY(6px);
+                opacity: 0.3;
+            }
+        }
+
+        /* ============ MAIN DASHBOARD ============ */
+        #main-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============ HEADER ============ */
+        .dashboard-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 32px;
+            background: rgba(8, 8, 18, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple), var(--pink));
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.6);
+            animation: pulseDot 2s ease infinite;
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 12px rgba(124, 58, 237, 0.6);
+            }
+
+            50% {
+                transform: scale(1.2);
+                box-shadow: 0 0 20px rgba(124, 58, 237, 0.9);
+            }
+        }
+
+        .brand-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 6px 16px 6px 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple), var(--pink));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-logout {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.08);
+            color: #f87171;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.25s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        /* ============ MAIN CONTENT ============ */
+        .dashboard-main {
+            flex: 1;
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 48px 32px;
+        }
+
+        /* ============ HERO ============ */
+        .hero-section {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .hero-eyebrow::before,
+        .hero-eyebrow::after {
+            content: '';
+            display: block;
+            width: 30px;
+            height: 1px;
+            background: var(--border-bright);
+        }
+
+        .hero-title {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+        }
+
+        .hero-title .gradient-text {
+            background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            color: var(--muted);
+            font-size: 1rem;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* ============ STATS BAR ============ */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 56px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--purple), var(--cyan));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-bright);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--purple), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        /* ============ CHART SECTION ============ */
+        .dashboard-chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .dashboard-chart-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+
+        /* ============ FEATURES GRID ============ */
+        .section-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 24px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 24px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(24px);
+        }
+
+        .feature-card.appeared {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color 0.3s, box-shadow 0.3s, background 0.3s;
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px) scale(1.01);
+            border-color: rgba(124, 58, 237, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(124, 58, 237, 0.15);
+            background: #161630;
+        }
+
+        .feature-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .feature-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--purple);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 20px;
+            font-family: 'Syne', sans-serif;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .feature-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.01em;
+        }
+
+        .feature-desc {
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        .feature-cta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--cyan);
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: all 0.25s;
+        }
+
+        .feature-card:hover .feature-cta {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .feature-cta svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.25s;
+        }
+
+        .feature-card:hover .feature-cta svg {
+            transform: translateX(3px);
+        }
+
+        /* ============ MODAL ============ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-bright);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 28px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .modal-header h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+        }
+
+        .modal-body {
+            padding: 24px 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* ============ FORM STYLES ============ */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: rgba(124, 58, 237, 0.6);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+        }
+
+        .form-select option {
+            background: #1a1a2e;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* ============ ADD FORM PANEL ============ */
+        .add-form-panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .add-form-panel h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        /* ============ BUTTONS ============ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--purple), #9333ea);
+            color: white;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 28px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            padding: 7px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* ============ ITEM CARDS ============ */
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .item-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .item-card:hover {
+            border-color: var(--border-bright);
+        }
+
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .item-meta {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        /* ============ EMPTY STATE ============ */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--muted);
+        }
+
+        .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 0.875rem;
+        }
+
+        /* ============ BADGE ============ */
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .badge-purple {
+            background: rgba(124, 58, 237, 0.15);
+            color: #a78bfa;
+        }
+
+        /* ============ TOAST ============ */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .toast-success {
+            border-left: 3px solid var(--green);
+        }
+
+        .toast-success::before {
+            content: '✓';
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .toast-error {
+            border-left: 3px solid var(--red);
+        }
+
+        .toast-error::before {
+            content: '✕';
+            color: var(--red);
+            font-weight: 700;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        /* ============ FOOTER ============ */
+        .dashboard-footer {
+            text-align: center;
+            padding: 20px 32px;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        /* ============ LOADING ============ */
+        .loading-dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .loading-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--purple);
+            animation: dotBounce 0.8s ease infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes dotBounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translateY(-8px);
+                opacity: 1;
+            }
+        }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 14px 20px;
+            }
+
+            .dashboard-main {
+                padding: 32px 20px;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero-title {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-bar {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-name {
+                display: none;
+            }
+        }
+
+        /* ============ PROFILE MODAL ============ */
+        .profile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            padding: 20px;
+        }
+
+        .profile-overlay.active {
+            display: flex;
+        }
+
+        .profile-modal {
+            background: #111127;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 680px;
+            overflow: hidden;
+            animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .profile-header h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .profile-body {
+            padding: 32px 28px;
+            display: flex;
+            gap: 36px;
+            align-items: flex-start;
+        }
+
+        /* Avatar section */
+        .profile-avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .profile-avatar-wrap {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            border-radius: 20px;
+            background: #0d0d20;
+            border: 2px solid rgba(124, 58, 237, 0.5);
+            box-shadow: 0 0 30px rgba(124, 58, 237, 0.25);
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .profile-avatar-wrap:hover {
+            border-color: rgba(124, 58, 237, 0.9);
+            box-shadow: 0 0 40px rgba(124, 58, 237, 0.4);
+        }
+
+        .profile-avatar-wrap img,
+        .profile-avatar-wrap .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .avatar-camera-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 38px;
+            height: 38px;
+            background: #7c3aed;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .profile-avatar-wrap:hover .avatar-camera-overlay {
+            background: #9333ea;
+            transform: scale(1.08);
+        }
+
+        .btn-change-photo {
+            padding: 9px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-change-photo:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Info section */
+        .profile-info-section {
+            flex: 1;
+        }
+
+        .profile-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 24px;
+        }
+
+
+
+        .profile-field-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .profile-field-label span {
+            font-size: 0.9rem;
+        }
+
+        .profile-field-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .profile-field-full {
+            grid-column: 1 / -1;
+        }
+
+        .profile-edit-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 100px;
+            background: #7c3aed;
+            border: none;
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+        }
+
+        .profile-edit-btn:hover {
+            background: #9333ea;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 28px rgba(124, 58, 237, 0.45);
+        }
+
+        /* Edit mode inputs */
+        .profile-edit-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: #0d0d20;
+            color: #f8fafc;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .profile-edit-input:focus {
+            outline: none;
+            border-color: rgba(124, 58, 237, 0.6);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+        }
+
+        .profile-footer {
+            padding: 20px 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .profile-footer-left {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .profile-footer-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* User chip avatar image */
+        .user-chip-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        /* Hidden file input */
+        #photo-file-input {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .profile-body {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .profile-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ============ WIZARD MODAL ============ */
+        .wizard-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .wizard-overlay.active {
+            display: flex;
+        }
+
+        .wizard-modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-bright);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Step indicator */
+        .wizard-steps {
+            display: flex;
+            align-items: center;
+            padding: 24px 32px 0;
+            gap: 0;
+        }
+
+        .wz-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .wz-step-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--muted);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+        }
+
+        .wz-step.active .wz-step-dot {
+            background: linear-gradient(135deg, var(--purple), var(--pink));
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+            transform: scale(1.1);
+        }
+
+        .wz-step.done .wz-step-dot {
+            background: var(--green);
+            border-color: transparent;
+            color: white;
+        }
+
+        .wz-step-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            transition: color 0.3s;
+            white-space: nowrap;
+        }
+
+        .wz-step.active .wz-step-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .wz-step.done .wz-step-label {
+            color: var(--green);
+        }
+
+        .wz-connector {
+            flex: 1;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 0 8px;
+            border-radius: 2px;
+            transition: background 0.4s;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .wz-connector-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--purple), var(--cyan));
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .wizard-header {
+            padding: 20px 32px 0;
+        }
+
+        .wizard-header h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .wizard-header p {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .wizard-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        .wizard-footer {
+            padding: 18px 32px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        /* Step 1 - category cards */
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .cat-card {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .cat-card:hover {
+            border-color: rgba(124, 58, 237, 0.4);
+            transform: translateY(-3px);
+            background: #161630;
+        }
+
+        .cat-card.selected {
+            border-color: var(--purple);
+            background: rgba(124, 58, 237, 0.12);
+            transform: scale(1.03);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18), 0 12px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .cat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .cat-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .cat-desc {
+            font-size: 0.75rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .cat-card.selected .cat-name {
+            color: #c4b5fd;
+        }
+
+        .cat-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--purple);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+        }
+
+        .cat-card {
+            position: relative;
+        }
+
+        .cat-card.selected .cat-check {
+            display: flex;
+        }
+
+        /* Step 2 - form */
+        .wz-form-group {
+            margin-bottom: 20px;
+        }
+
+        .wz-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 8px;
+            letter-spacing: 0.03em;
+        }
+
+        .wz-label span {
+            color: #f87171;
+            margin-left: 2px;
+        }
+
+        .wz-input,
+        .wz-textarea {
+            width: 100%;
+            padding: 13px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg);
+            color: var(--white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .wz-input:focus,
+        .wz-textarea:focus {
+            outline: none;
+            border-color: rgba(124, 58, 237, 0.6);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+        }
+
+        .wz-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .wz-tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg);
+            min-height: 48px;
+            cursor: text;
+            transition: border-color 0.2s;
+        }
+
+        .wz-tags-input:focus-within {
+            border-color: rgba(124, 58, 237, 0.6);
+        }
+
+        .wz-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(124, 58, 237, 0.18);
+            color: #c4b5fd;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .wz-tag button {
+            background: none;
+            border: none;
+            color: #c4b5fd;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        .wz-tag-bare-input {
+            border: none;
+            background: none;
+            color: var(--white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            min-width: 80px;
+            flex: 1;
+        }
+
+        .wz-hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* Step 3 - review */
+        .review-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .review-row {
+            display: flex;
+            align-items: flex-start;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            gap: 14px;
+        }
+
+        .review-row:last-child {
+            border-bottom: none;
+        }
+
+        .review-key {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            width: 90px;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .review-val {
+            font-size: 0.92rem;
+            color: var(--white);
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .review-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(124, 58, 237, 0.15);
+            color: #c4b5fd;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .review-success-icon {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+
+        /* ============ INBOX SUBMISSIONS SECTION ============ */
+        .inbox-section {
+                margin-bottom: 40px;
+            }
+
+            .inbox-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                padding: 24px 28px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            }
+
+            .inbox-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .inbox-title {
+                font-family: 'Syne', sans-serif;
+                font-size: 1.15rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .inbox-badge-count {
+                background: linear-gradient(135deg, var(--purple), var(--pink));
+                color: white;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 700;
+            }
+
+            .inbox-filters {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+
+            .inbox-search {
+                flex: 1;
+                min-width: 200px;
+                padding: 9px 14px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                background: var(--bg);
+                color: var(--white);
+                font-family: 'DM Sans', sans-serif;
+                font-size: 0.875rem;
+            }
+
+            .inbox-search:focus {
+                outline: none;
+                border-color: rgba(124, 58, 237, 0.6);
+                box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+            }
+
+            .inbox-filter {
+                padding: 9px 14px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                background: var(--bg);
+                color: var(--white);
+                font-family: 'DM Sans', sans-serif;
+                font-size: 0.875rem;
+                cursor: pointer;
+            }
+
+            .inbox-filter option {
+                background: #1a1a2e;
+            }
+
+            .inbox-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                max-height: 480px;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+
+            .inbox-list::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .inbox-list::-webkit-scrollbar-thumb {
+                background: rgba(124, 58, 237, 0.3);
+                border-radius: 10px;
+            }
+
+            .inbox-item {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 14px 18px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                transition: all 0.25s;
+            }
+
+            .inbox-item:hover {
+                border-color: rgba(124, 58, 237, 0.4);
+                background: #161630;
+                transform: translateX(2px);
+            }
+
+            .inbox-item-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                background: rgba(124, 58, 237, 0.12);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.4rem;
+                flex-shrink: 0;
+            }
+
+            .inbox-item-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .inbox-item-title-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+                flex-wrap: wrap;
+            }
+
+            .inbox-item-title {
+                font-family: 'Syne', sans-serif;
+                font-weight: 700;
+                font-size: 0.95rem;
+                color: var(--white);
+            }
+
+            .inbox-badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 20px;
+                font-size: 0.65rem;
+                font-weight: 700;
+            }
+
+            .badge-api {
+                background: rgba(124, 58, 237, 0.18);
+                color: #c4b5fd;
+            }
+
+            .badge-manual {
+                background: rgba(6, 182, 212, 0.18);
+                color: #67e8f9;
+            }
+
+            .status-pill {
+                padding: 2px 8px;
+                border-radius: 20px;
+                font-size: 0.68rem;
+                font-weight: 600;
+            }
+
+            .status-pending {
+                background: rgba(245, 158, 11, 0.15);
+                color: #fbbf24;
+            }
+
+            .status-in_progress {
+                background: rgba(99, 102, 241, 0.15);
+                color: #a5b4fc;
+            }
+
+            .status-completed {
+                background: rgba(16, 185, 129, 0.15);
+                color: #6ee7b7;
+            }
+
+            .status-sent {
+                background: rgba(20, 184, 166, 0.15);
+                color: #5eead4;
+            }
+
+            .status-rejected {
+                background: rgba(239, 68, 68, 0.15);
+                color: #fca5a5;
+            }
+
+            .inbox-item-meta {
+                font-size: 0.75rem;
+                color: var(--muted);
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .inbox-item-meta .dot {
+                color: rgba(255, 255, 255, 0.2);
+            }
+
+            .btn-process {
+                padding: 8px 16px;
+                border-radius: 10px;
+                border: none;
+                background: linear-gradient(135deg, var(--purple), #9333ea);
+                color: white;
+                cursor: pointer;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 0.8rem;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+                transition: all 0.2s;
+                flex-shrink: 0;
+            }
+
+            .btn-process:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+            }
+
+            .inbox-empty {
+                text-align: center;
+                padding: 40px 20px;
+                color: var(--muted);
+            }
+
+            .inbox-empty-icon {
+                font-size: 2.5rem;
+                margin-bottom: 8px;
+                opacity: 0.5;
+            }
+
+            /* ============ PROCESS CHOICE MODAL ============ */
+            .choice-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 4000;
+                padding: 20px;
+            }
+
+            .choice-overlay.active {
+                display: flex;
+            }
+
+            .choice-modal {
+                background: var(--bg-card);
+                border: 1px solid var(--border-bright);
+                border-radius: 24px;
+                max-width: 540px;
+                width: 100%;
+                padding: 32px;
+                animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+
+            .choice-modal h2 {
+                font-family: 'Syne', sans-serif;
+                font-size: 1.25rem;
+                font-weight: 800;
+                margin-bottom: 6px;
+                text-align: center;
+            }
+
+            .choice-modal-subtitle {
+                color: var(--muted);
+                font-size: 0.85rem;
+                text-align: center;
+                margin-bottom: 28px;
+            }
+
+            .choice-options {
+                display: grid;
+                gap: 14px;
+            }
+
+            .choice-card {
+                background: var(--bg);
+                border: 2px solid var(--border);
+                border-radius: 16px;
+                padding: 22px;
+                cursor: pointer;
+                transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+                text-align: left;
+            }
+
+            .choice-card:hover {
+                border-color: rgba(124, 58, 237, 0.5);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+            }
+
+            .choice-card-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 10px;
+            }
+
+            .choice-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.6rem;
+                flex-shrink: 0;
+            }
+
+            .choice-icon.ai {
+                background: rgba(124, 58, 237, 0.2);
+            }
+
+            .choice-icon.manual {
+                background: rgba(6, 182, 212, 0.2);
+            }
+
+            .choice-title {
+                font-family: 'Syne', sans-serif;
+                font-weight: 700;
+                font-size: 1rem;
+                margin-bottom: 2px;
+            }
+
+            .choice-tag {
+                display: inline-block;
+                font-size: 0.65rem;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 20px;
+                background: rgba(16, 185, 129, 0.15);
+                color: #6ee7b7;
+            }
+
+            .choice-desc {
+                font-size: 0.85rem;
+                color: var(--muted);
+                line-height: 1.5;
+            }
+
+            .choice-modal-close {
+                display: block;
+                margin: 20px auto 0;
+                padding: 10px 24px;
+                background: transparent;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                color: var(--muted);
+                cursor: pointer;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 0.85rem;
+            }
+
+            .choice-modal-close:hover {
+                color: white;
+                border-color: var(--border-bright);
+            }
+    </style>
+</head>
+
+<body>
+
+    <!-- ======== SEQUENCE ANIMATION OVERLAY ======== -->
+    <div id="sequence-overlay">
+        <canvas id="sequence-canvas"></canvas>
+        <div class="seq-progress-bar" id="seq-progress"></div>
+        <div class="seq-scroll-hint" id="scroll-hint">
+            <div class="seq-scroll-mouse"></div>
+            <span>Scroll to explore</span>
+        </div>
+    </div>
+
+    <!-- ======== MAIN DASHBOARD ======== -->
+    <div id="main-content">
+
+        <header class="dashboard-header">
+            <div class="header-brand">
+                <div class="brand-dot"></div>
+                <span class="brand-name">Intelligence Creation</span>
+            </div>
+            <div class="header-right">
+                <div class="user-chip" onclick="openProfile()" style="cursor:pointer;" title="Lihat Profil">
+                    <div id="user-avatar" class="user-avatar">U</div>
+                    <span id="user-name" class="user-name">User</span>
+                </div>
+                <button class="btn-logout" onclick="logout()">Keluar</button>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+
+            <!-- Hero -->
+            <section class="hero-section">
+                <div class="hero-eyebrow" id="hero-greeting">Selamat datang kembali</div>
+                <h1 class="hero-title">Pusat <span class="gradient-text">Intelligence Creation</span></h1>
+                <p class="hero-subtitle">Kelola data, model AI, pelatihan, dan kolaborasi tim dalam satu platform
+                    terpadu.</p>
+            </section>
+
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Total Entri</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-framing">0</div>
+                    <div class="stat-label">Problem Framing</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-processing">0</div>
+                    <div class="stat-label">Data Processing</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-training">0</div>
+                    <div class="stat-label">Training & Testing</div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="dashboard-chart-card">
+                <div class="dashboard-chart-header">
+                    <h3 class="dashboard-chart-title">Aktivitas Pipeline AI Mingguan</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+            <!-- ⭐ INBOX SUBMISSIONS SECTION ⭐ -->
+            <div class="section-label" style="margin-top: 40px;">Pusat Intelligence Creation</div>
+            <div class="inbox-section">
+                <div class="inbox-card">
+                    <div class="inbox-header">
+                        <div class="inbox-title">
+                            <span>📥</span>
+                            <span>File Masuk</span>
+                            <span class="inbox-badge-count" id="inbox-count">0</span>
+                        </div>
+                        <button class="btn-refresh" id="inbox-refresh" onclick="loadInboxSubmissions(true)" style="padding:8px 16px; border-radius:10px; border:1px solid var(--border); 
+                                background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.8); 
+                                cursor:pointer; font-size:0.85rem;">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div class="inbox-filters">
+                        <input type="text" class="inbox-search" id="inbox-search"
+                            placeholder="🔍 Cari berdasarkan judul atau pengirim..." oninput="applyInboxFilters()">
+                        <select class="inbox-filter" id="inbox-source-filter" onchange="applyInboxFilters()">
+                            <option value="">Semua Sumber</option>
+                            <option value="api">[API] Engineer</option>
+                            <option value="manual">[Manual]</option>
+                        </select>
+                        <select class="inbox-filter" id="inbox-status-filter" onchange="applyInboxFilters()">
+                            <option value="">Semua Status</option>
+                            <option value="pending">⏳ Pending</option>
+                            <option value="in_progress">🔄 Progress</option>
+                            <option value="completed">✅ Completed</option>
+                            <option value="sent">📤 Sent</option>
+                            <option value="rejected">❌ Rejected</option>
+                        </select>
+                    </div>
+
+                    <div class="inbox-list" id="inbox-list">
+                        <div class="loading-dots"><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ⭐ END INBOX SUBMISSIONS ⭐ -->
+
+
+
+
+
+        </main>
+
+        <footer class="dashboard-footer">
+            &copy; 2026 Intelligence Creation — Dibuat dengan 🧠
+        </footer>
+    </div>
+
+    <!-- ======== MODAL ======== -->
+    <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Fitur</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+
+    <!-- ======== WIZARD MODAL: DATA ENTRY SEKUENSIAL ======== -->
+    <div id="wizard-overlay" class="wizard-overlay" onclick="closeWizard(event)">
+        <div class="wizard-modal" onclick="event.stopPropagation()">
+
+            <!-- Step Indicator -->
+            <div class="wizard-steps" id="wz-step-bar">
+                <div class="wz-step active" id="wz-dot-1">
+                    <div class="wz-step-dot">1</div>
+                    <span class="wz-step-label">Kategori</span>
+                </div>
+                <div class="wz-connector">
+                    <div class="wz-connector-fill" id="wz-fill-1"></div>
+                </div>
+                <div class="wz-step" id="wz-dot-2">
+                    <div class="wz-step-dot">2</div>
+                    <span class="wz-step-label">Detail</span>
+                </div>
+                <div class="wz-connector">
+                    <div class="wz-connector-fill" id="wz-fill-2"></div>
+                </div>
+                <div class="wz-step" id="wz-dot-3">
+                    <div class="wz-step-dot">3</div>
+                    <span class="wz-step-label">Konfirmasi</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Header -->
+            <div class="wizard-header">
+                <h2 id="wz-title">Pilih Kategori Data</h2>
+                <p id="wz-subtitle">Tentukan jenis data yang ingin Anda simpan</p>
+            </div>
+
+            <!-- Dynamic Body -->
+            <div class="wizard-body" id="wz-body"></div>
+
+            <!-- Footer Navigation -->
+            <div class="wizard-footer">
+                <button class="btn btn-secondary" id="wz-btn-back" onclick="wizardBack()" style="display:none">←
+                    Kembali</button>
+                <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                    <span id="wz-step-label" style="font-size:0.8rem;color:var(--muted);">Langkah 1 dari 3</span>
+                    <button class="btn btn-primary" id="wz-btn-next" onclick="wizardNext()">Lanjut →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ======== PROFILE MODAL ======== -->
+    <div id="profile-overlay" class="profile-overlay" onclick="closeProfile(event)">
+        <div class="profile-modal" onclick="event.stopPropagation()">
+            <div class="profile-header">
+                <h2>Personal Information</h2>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="profile-edit-btn" id="profile-edit-toggle" onclick="toggleProfileEdit()">
+                        ✏️ Edit Profile
+                    </button>
+                    <button class="modal-close" onclick="closeProfile()">✕</button>
+                </div>
+            </div>
+
+            <div class="profile-body">
+                <!-- Avatar -->
+                <div class="profile-avatar-section">
+                    <div class="profile-avatar-wrap" onclick="triggerPhotoUpload()">
+                        <div class="avatar-placeholder" id="profile-avatar-placeholder">👤</div>
+                        <img id="profile-avatar-img" style="display:none;position:absolute;inset:0;" alt="Profile">
+                        <div class="avatar-camera-overlay">📷</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+                        <button class="btn-change-photo" style="flex: 1; padding: 10px 0;"
+                            onclick="triggerPhotoUpload()">Upload</button>
+                        <button class="btn-change-photo"
+                            style="flex: 1; padding: 10px 0; background: rgba(124, 58, 237, 0.2); border-color: rgba(124, 58, 237, 0.4); color: #a78bfa;"
+                            onclick="openCameraModal()"><i class="fas fa-camera"></i> Kamera</button>
+                    </div>
+                    <input type="file" id="photo-file-input" accept="image/*" onchange="handlePhotoChange(event)">
+                </div>
+
+                <!-- Info -->
+                <div class="profile-info-section">
+                    <div class="profile-info-grid" id="profile-info-grid">
+                        <!-- rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-footer">
+                <span class="profile-footer-left" id="profile-member-since">Member since —</span>
+                <div class="profile-footer-right" id="profile-save-btns" style="display:none;">
+                    <button class="btn btn-secondary" onclick="cancelProfileEdit()">Batal</button>
+                    <button class="btn btn-primary" onclick="saveProfile()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== CAMERA MODAL ======== -->
+    <div id="camera-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.97); z-index:5000; flex-direction:column; align-items:center; justify-content:center;">
+
+        <!-- Header -->
+        <div
+            style="position:absolute; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:20px 28px; background:rgba(0,0,0,0.5); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div
+                    style="width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 12px #ef4444;animation:pulseDot 1.5s ease infinite;">
+                </div>
+                <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">📷 Ambil Foto
+                    Profil</span>
+            </div>
+            <button onclick="closeCameraModal()"
+                style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+
+        <!-- Camera view (live) -->
+        <div id="cam-live-view"
+            style="display:flex;flex-direction:column;align-items:center;gap:24px;padding-top:30px;">
+            <div
+                style="position:relative;border-radius:20px;overflow:hidden;border:2px solid rgba(124,58,237,0.6);box-shadow:0 0 40px rgba(124,58,237,0.3);">
+                <!-- Corner guides -->
+                <div
+                    style="position:absolute;top:12px;left:12px;width:28px;height:28px;border-top:3px solid #7c3aed;border-left:3px solid #7c3aed;border-radius:4px 0 0 0;z-index:2;">
+                </div>
+                <div
+                    style="position:absolute;top:12px;right:12px;width:28px;height:28px;border-top:3px solid #7c3aed;border-right:3px solid #7c3aed;border-radius:0 4px 0 0;z-index:2;">
+                </div>
+                <div
+                    style="position:absolute;bottom:12px;left:12px;width:28px;height:28px;border-bottom:3px solid #7c3aed;border-left:3px solid #7c3aed;border-radius:0 0 0 4px;z-index:2;">
+                </div>
+                <div
+                    style="position:absolute;bottom:12px;right:12px;width:28px;height:28px;border-bottom:3px solid #7c3aed;border-right:3px solid #7c3aed;border-radius:0 0 4px 0;z-index:2;">
+                </div>
+
+                <video id="camera-video" autoplay playsinline muted
+                    style="width:100%;max-width:480px;height:auto;display:block;transform:scaleX(-1);"></video>
+
+                <!-- Countdown overlay -->
+                <div id="cam-countdown"
+                    style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:10;">
+                    <div id="cam-countdown-num"
+                        style="font-family:'Syne',sans-serif;font-size:6rem;font-weight:800;color:white;text-shadow:0 0 40px rgba(124,58,237,0.8);animation:countPulse 1s ease;">
+                        3</div>
+                </div>
+            </div>
+
+            <!-- Status text -->
+            <p id="cam-status" style="color:rgba(255,255,255,0.5);font-size:0.85rem;">Posisikan wajah Anda di dalam
+                bingkai</p>
+
+            <!-- Buttons -->
+            <div style="display:flex;gap:12px;">
+                <button onclick="closeCameraModal()"
+                    style="padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Batal</button>
+                <button id="cam-capture-btn" onclick="startCountdown()"
+                    style="padding:12px 32px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,0.4);transition:all 0.2s;display:flex;align-items:center;gap:8px;">📷
+                    Ambil Foto</button>
+            </div>
+        </div>
+
+        <!-- Preview view (after capture) -->
+        <div id="cam-preview-view"
+            style="display:none;flex-direction:column;align-items:center;gap:24px;padding-top:30px;">
+            <div style="position:relative;">
+                <img id="cam-preview-img"
+                    style="width:280px;height:280px;object-fit:cover;border-radius:20px;border:3px solid #7c3aed;box-shadow:0 0 40px rgba(124,58,237,0.4);"
+                    alt="Preview">
+                <div
+                    style="position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);background:#10b981;color:white;font-size:0.75rem;font-weight:700;padding:4px 14px;border-radius:20px;white-space:nowrap;">
+                    ✓ Foto diambil</div>
+            </div>
+            <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;text-align:center;">Apakah Anda ingin menggunakan
+                foto ini sebagai foto profil?</p>
+            <div style="display:flex;gap:12px;">
+                <button onclick="retakePhoto()"
+                    style="padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;">🔄
+                    Ulangi</button>
+                <button onclick="confirmSnapshot()"
+                    style="padding:12px 32px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(16,185,129,0.4);display:flex;align-items:center;gap:8px;">✓
+                    Gunakan Foto ini</button>
+            </div>
+        </div>
+
+        <!-- Hidden canvas for capture -->
+        <canvas id="camera-canvas" style="display:none;"></canvas>
+    </div>
+
+    <style>
+        @keyframes countPulse {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+
+    <!-- ⭐ PROCESS CHOICE MODAL ⭐ -->
+    <div id="choice-overlay" class="choice-overlay" onclick="closeChoiceModal(event)">
+        <div class="choice-modal" onclick="event.stopPropagation()">
+            <h2>🚀 Cara Memproses Submission</h2>
+            <p class="choice-modal-subtitle" id="choice-subtitle">Pilih metode pemrosesan untuk file ini</p>
+
+            <div class="choice-options">
+                <div class="choice-card" onclick="processWithAI()">
+                    <div class="choice-card-header">
+                        <div class="choice-icon ai">🤖</div>
+                        <div>
+                            <div class="choice-title">AI Auto-Framing</div>
+                            <span class="choice-tag">RECOMMENDED</span>
+                        </div>
+                    </div>
+                    <div class="choice-desc">
+                        AI otomatis analisis file dan generate Problem Framing IPO.
+                        Cocok untuk gambar, CSV, dan file teks. Cepat ⚡ & akurat.
+                    </div>
+                </div>
+
+                <div class="choice-card" onclick="processWithManual()">
+                    <div class="choice-card-header">
+                        <div class="choice-icon manual">✏️</div>
+                        <div>
+                            <div class="choice-title">Manual Wizard (6 Tahap)</div>
+                            <span class="choice-tag" style="background:rgba(6,182,212,0.15);color:#67e8f9;">FULL
+                                CONTROL</span>
+                        </div>
+                    </div>
+                    <div class="choice-desc">
+                        Isi sendiri semua 6 tahap ML Pipeline secara berurutan.
+                        Cocok kalau Anda ingin kontrol penuh atas dokumentasi.
+                    </div>
+                </div>
+            </div>
+
+            <button class="choice-modal-close" onclick="closeChoiceModal()">Batal</button>
+        </div>
+    </div>
+
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // =====================================================================
+        // CONFIG
+        // =====================================================================
+        const FRAME_COUNT = 240;
+
+        // =====================================================================
+        // 6 TAHAPAN ML PIPELINE
+        // =====================================================================
+        const FEATURES = [
+            {
+                key: 'problem-framing',
+                title: 'Problem Framing & IPO',
+                icon: '🎯',
+                desc: 'Rekam hasil problem framing dan model perangkat lunak dalam model Input, Proses, Output.',
+                color: '#7c3aed',
+                bg: 'rgba(124,58,237,0.12)',
+                endpoint: '/api/data-collection',
+                titleField: 'title',
+                statKey: 'data-collection'
+            },
+            {
+                key: 'dataset-definition',
+                title: 'Definisi Dataset',
+                icon: '🗄️',
+                desc: 'Rekam pendefinisian model dataset yang perlu dibangun untuk kebutuhan training.',
+                color: '#06b6d4',
+                bg: 'rgba(6,182,212,0.12)',
+                endpoint: '/api/analysis',
+                titleField: 'title',
+                statKey: 'analysis'
+            },
+            {
+                key: 'data-processing',
+                title: 'Pemrosesan Data',
+                icon: '⚙️',
+                desc: 'Rekam aktivitas univariate, multivariate, rekayasa fitur, penyiapan dataset pelatihan, evaluasi, dan test.',
+                color: '#f59e0b',
+                bg: 'rgba(245,158,11,0.12)',
+                endpoint: '/api/visualization',
+                titleField: 'title',
+                statKey: 'visualization'
+            },
+            {
+                key: 'model-planning',
+                title: 'Perencanaan Model',
+                icon: '🧠',
+                desc: 'Rekam perencanaan model cerdas dan perencanaan refining model AI.',
+                color: '#10b981',
+                bg: 'rgba(16,185,129,0.12)',
+                endpoint: '/api/models',
+                titleField: 'name',
+                statKey: 'models'
+            },
+            {
+                key: 'training-testing',
+                title: 'Pelatihan & Testing',
+                icon: '🚀',
+                desc: 'Rekam hasil pelatihan dan pengujian model dengan metrik akurasi dan performa.',
+                color: '#ef4444',
+                bg: 'rgba(239,68,68,0.12)',
+                endpoint: '/api/training',
+                titleField: 'name',
+                statKey: 'training'
+            },
+            {
+                key: 'model-refining',
+                title: 'Refining Model',
+                icon: '✨',
+                desc: 'Rekam hasil refining model — peningkatan performa, tuning hyperparameter, dan iterasi perbaikan.',
+                color: '#ec4899',
+                bg: 'rgba(236,72,153,0.12)',
+                endpoint: '/api/insights',
+                titleField: 'title',
+                statKey: 'insights'
+            }
+        ];
+
+        // =====================================================================
+        // CANVAS SEQUENCE
+        // =====================================================================
+        let canvas, ctx, images = [], currentFrame = 0;
+        let seqDone = false;
+
+        function initSequence() {
+            canvas = document.getElementById('sequence-canvas');
+            if (!canvas) return;
+            ctx = canvas.getContext('2d');
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = window.innerWidth * dpr;
+                canvas.height = window.innerHeight * dpr;
+                canvas.style.width = window.innerWidth + 'px';
+                canvas.style.height = window.innerHeight + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+            }
+            resize();
+            window.addEventListener('resize', () => { resize(); renderFrame(currentFrame); });
+
+            // Preload images
+            let loaded = 0;
+            for (let i = 0; i < FRAME_COUNT; i++) {
+                const img = new Image();
+                img.src = '/static/sequence/ezgif-frame-' + String(i + 1).padStart(3, '0') + '.jpg';
+                img.onload = () => { loaded++; if (i === 0) renderFrame(0); };
+                images.push(img);
+            }
+
+            // Scroll handler — smooth with RAF
+            let rafId = null;
+            let targetFrame = 0;
+            let animFrame = 0;
+
+            function animateToFrame() {
+                if (Math.abs(animFrame - targetFrame) < 0.5) {
+                    animFrame = targetFrame;
+                    renderFrame(Math.round(animFrame));
+                    rafId = null;
+                    return;
+                }
+                animFrame += (targetFrame - animFrame) * 0.12;
+                renderFrame(Math.round(animFrame));
+                rafId = requestAnimationFrame(animateToFrame);
+            }
+
+            function updateProgress() {
+                const pct = (targetFrame / (FRAME_COUNT - 1)) * 100;
+                document.getElementById('seq-progress').style.width = pct + '%';
+            }
+
+            function handleScroll(e) {
+                if (seqDone) return;
+                e.preventDefault();
+
+                const delta = e.deltaY || e.detail || (-e.wheelDelta);
+                const step = delta > 0 ? 4 : -4;
+                targetFrame = Math.min(Math.max(targetFrame + step, 0), FRAME_COUNT - 1);
+                currentFrame = targetFrame;
+
+                updateProgress();
+
+                // Hide hint after first scroll
+                if (targetFrame > 2) {
+                    const hint = document.getElementById('scroll-hint');
+                    if (hint) hint.style.opacity = '0';
+                } else {
+                    const hint = document.getElementById('scroll-hint');
+                    if (hint) hint.style.opacity = '1';
+                }
+
+                if (!rafId) rafId = requestAnimationFrame(animateToFrame);
+
+                // Trigger exit when reaching end
+                if (targetFrame >= FRAME_COUNT - 1) {
+                    seqDone = true;
+                    setTimeout(exitSequence, 400);
+                }
+            }
+
+            window.addEventListener('wheel', handleScroll, { passive: false });
+
+            // Touch support
+            let touchStartY = 0;
+            window.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+            window.addEventListener('touchmove', e => {
+                if (seqDone) return;
+                const dy = touchStartY - e.touches[0].clientY;
+                touchStartY = e.touches[0].clientY;
+                targetFrame = Math.min(Math.max(targetFrame + Math.round(dy / 4), 0), FRAME_COUNT - 1);
+                currentFrame = targetFrame;
+                updateProgress();
+                if (!rafId) rafId = requestAnimationFrame(animateToFrame);
+                if (targetFrame >= FRAME_COUNT - 1) { seqDone = true; setTimeout(exitSequence, 400); }
+            }, { passive: true });
+
+            images[0].onload = () => renderFrame(0);
+        }
+
+        // Called from dashboard scroll-up to re-enter sequence
+        function enterSequence() {
+            seqDone = false;
+            currentFrame = FRAME_COUNT - 1;
+            // reset internal RAF targets
+            const overlay = document.getElementById('sequence-overlay');
+            overlay.style.display = 'flex';
+            overlay.style.animation = '';
+            overlay.style.opacity = '1';
+            overlay.style.transform = 'scale(1)';
+            overlay.classList.remove('hidden');
+
+            const main = document.getElementById('main-content');
+            main.classList.remove('visible');
+            setTimeout(() => { main.style.display = 'none'; }, 400);
+
+            renderFrame(FRAME_COUNT - 1);
+            document.getElementById('seq-progress').style.width = '100%';
+            const hint = document.getElementById('scroll-hint');
+            if (hint) hint.style.opacity = '0';
+        }
+
+        function renderFrame(index) {
+            const img = images[index];
+            if (!img || !img.complete || !img.naturalWidth) return;
+            const w = window.innerWidth, h = window.innerHeight;
+            const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+            const x = (w - img.naturalWidth * scale) / 2;
+            const y = (h - img.naturalHeight * scale) / 2;
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(img, x, y, img.naturalWidth * scale, img.naturalHeight * scale);
+        }
+
+        function exitSequence() {
+            const overlay = document.getElementById('sequence-overlay');
+            overlay.classList.add('hidden');
+
+            const main = document.getElementById('main-content');
+            main.style.display = 'flex';
+            main.style.flexDirection = 'column';
+
+            setTimeout(() => {
+                main.classList.add('visible');
+                overlay.style.pointerEvents = 'none';
+            }, 100);
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 1300);
+
+            loadStats();
+
+            // Listen for scroll-up at top of dashboard to re-enter sequence
+            function onDashScrollUp(e) {
+                if (!seqDone) return;
+                const atTop = window.scrollY <= 0;
+                if (atTop && e.deltaY < 0) {
+                    window.removeEventListener('wheel', onDashScrollUp);
+                    enterSequence();
+                }
+            }
+            setTimeout(() => {
+                window.addEventListener('wheel', onDashScrollUp, { passive: true });
+            }, 1500);
+        }
+
+        // =====================================================================
+        // RENDER FEATURES
+        // =====================================================================
+        function renderFeatures() {
+            const grid = document.getElementById('features-grid');
+            if (!grid) return;
+            grid.innerHTML = FEATURES.map((f, i) => `
+            <div class="feature-card" onclick="openFeature('${f.key}')" style="transition-delay: ${i * 0.06}s">
+                <div class="feature-icon-wrap" style="background:${f.bg}">
+                    ${f.icon}
+                    <span class="feature-badge" id="count-${f.key}">0</span>
+                </div>
+                <div class="feature-title">${f.title}</div>
+                <div class="feature-desc">${f.desc}</div>
+                <div class="feature-cta">
+                    Lihat data
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+            </div>
+        `).join('');
+
+            // Staggered appear animation
+            setTimeout(() => {
+                document.querySelectorAll('.feature-card').forEach((card, i) => {
+                    setTimeout(() => card.classList.add('appeared'), i * 70);
+                });
+            }, 100);
+        }
+
+        // =====================================================================
+        // STATS
+        // =====================================================================
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const result = await res.json();
+                const stats = result.stats || {};
+                FEATURES.forEach(f => {
+                    const el = document.getElementById('count-' + f.key);
+                    if (el && stats[f.statKey] !== undefined) el.textContent = stats[f.statKey];
+                });
+                const total = FEATURES.reduce((acc, f) => acc + (stats[f.statKey] || 0), 0);
+                animateCounter('stat-total', total);
+                animateCounter('stat-framing', stats['data-collection'] || 0);
+                animateCounter('stat-processing', stats['visualization'] || 0);
+                animateCounter('stat-training', stats['training'] || 0);
+            } catch (err) { console.warn('Stats unavailable'); }
+        }
+
+        function animateCounter(id, target) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let cur = 0, inc = Math.max(1, Math.ceil(target / 25));
+            const t = setInterval(() => {
+                cur = Math.min(cur + inc, target);
+                el.textContent = cur;
+                if (cur >= target) clearInterval(t);
+            }, 28);
+        }
+
+        // =====================================================================
+        // MODAL
+        // =====================================================================
+        let currentFeature = null;
+
+        function openFeature(key) {
+            if (key === 'training-testing') {
+                window.location.href = '/ml_pipeline.html';
+                return;
+            }
+
+            currentFeature = FEATURES.find(f => f.key === key);
+            if (!currentFeature) return;
+
+            // Pakai wizard sekuensial untuk semua fitur
+            openWizard();
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget && !event.target.closest('.modal-close')) return;
+            document.getElementById('modal-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+            currentFeature = null;
+        }
+
+        async function loadFeatureItems(feature) {
+            const body = document.getElementById('modal-body');
+            body.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+            try {
+                const res = await fetch(feature.endpoint);
+                const result = await res.json();
+                const data = result.data || [];
+
+                let html = `
+                <button class="btn btn-primary" onclick="showAddForm()" style="margin-bottom:20px; width:100%; justify-content:center;">
+                    + Tambah ${feature.title}
+                </button>
+                <div id="add-form-container"></div>
+                <div class="items-list">
+            `;
+
+                if (!data.length) {
+                    html += `<div class="empty-state"><div class="empty-icon">${feature.icon}</div><p>Belum ada data. Klik tombol di atas untuk menambahkan.</p></div>`;
+                } else {
+                    data.forEach(item => {
+                        const title = item[feature.titleField] || item.name || item.title || 'Tanpa Judul';
+                        const date = item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                        html += `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">${title}</div>
+                                ${date ? `<div class="item-meta">${date}</div>` : ''}
+                            </div>
+                            <button class="btn btn-danger" onclick="deleteItem(${item.id})">Hapus</button>
+                        </div>
+                    `;
+                    });
+                }
+
+                html += '</div>';
+                body.innerHTML = html;
+            } catch (err) {
+                body.innerHTML = `<div class="empty-state"><p style="color:#f87171">Gagal memuat data: ${err.message}</p></div>`;
+            }
+        }
+
+        function showAddForm() {
+            if (!currentFeature) return;
+            const c = document.getElementById('add-form-container');
+            let h = '<div class="add-form-panel"><h3>Tambah ' + currentFeature.title + '</h3>';
+            currentFeature.fields.forEach(f => {
+                const id = 'f-' + f.name;
+                h += `<div class="form-group"><label>${f.label}${f.required ? ' *' : ''}</label>`;
+                if (f.type === 'textarea') h += `<textarea id="${id}" class="form-textarea" placeholder="${f.label}..."></textarea>`;
+                else if (f.type === 'select') h += `<select id="${id}" class="form-select">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+                else h += `<input type="${f.type || 'text'}" id="${id}" class="form-input" placeholder="${f.label}...">`;
+                h += '</div>';
+            });
+            h += '<div class="form-actions"><button class="btn btn-secondary" onclick="hideAddForm()">Batal</button><button class="btn btn-primary" onclick="submitAdd()">Simpan</button></div></div>';
+            c.innerHTML = h;
+            c.querySelector('.form-input, .form-select, .form-textarea')?.focus();
+        }
+
+        function hideAddForm() {
+            document.getElementById('add-form-container').innerHTML = '';
+        }
+
+        async function submitAdd() {
+            if (!currentFeature) return;
+            const data = {};
+            currentFeature.fields.forEach(f => {
+                const el = document.getElementById('f-' + f.name);
+                if (el) data[f.name] = f.type === 'number' ? Number(el.value) : el.value;
+            });
+            // Validate required
+            const reqField = currentFeature.fields.find(f => f.required);
+            if (reqField && !data[reqField.name]?.trim()) {
+                showToast(reqField.label + ' wajib diisi', 'error'); return;
+            }
+            try {
+                const res = await fetch(currentFeature.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (!res.ok) throw new Error('Gagal menyimpan');
+                showToast('Berhasil disimpan!', 'success');
+                hideAddForm();
+                await loadFeatureItems(currentFeature);
+                await loadStats();
+            } catch (err) { showToast('Error: ' + err.message, 'error'); }
+        }
+
+        async function deleteItem(id) {
+            if (!currentFeature || !confirm('Hapus item ini?')) return;
+            try {
+                await fetch(currentFeature.endpoint + '/' + id, { method: 'DELETE' });
+                showToast('Item dihapus', 'success');
+                await loadFeatureItems(currentFeature);
+                await loadStats();
+            } catch (err) { showToast('Gagal menghapus', 'error'); }
+        }
+
+        // =====================================================================
+        // TOAST
+        // =====================================================================
+        function showToast(msg, type = 'success') {
+            const t = document.createElement('div');
+            t.className = 'toast toast-' + type;
+            t.textContent = msg;
+            document.getElementById('toast-container').appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        // =====================================================================
+        // MISC
+        // =====================================================================
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (e) { }
+            // Hapus semua data lokal agar tidak ada sisa session di browser
+            try { localStorage.removeItem('ic_profile'); } catch (e) { }
+            // Redirect ke halaman login (bukan landing page)
+            window.location.href = '/login.html';
+        }
+
+        // =====================================================================
+        // WIZARD: DATA ENTRY SEKUENSIAL
+        // =====================================================================
+        let wzStep = 1;
+        let wzData = { category: '', dataType: '', title: '', content: '', tags: [], extra: {} };
+
+        function openWizard() {
+            wzStep = 1;
+            wzData = { category: '', dataType: '', title: '', content: '', tags: [], extra: {} };
+            document.getElementById('wizard-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            renderWizardStep();
+        }
+
+        function closeWizard(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('wizard-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function updateWizardNav() {
+            const backBtn = document.getElementById('wz-btn-back');
+            const nextBtn = document.getElementById('wz-btn-next');
+            const stepLbl = document.getElementById('wz-step-label');
+            const dots = [null, 'wz-dot-1', 'wz-dot-2', 'wz-dot-3'];
+            const fills = [null, 'wz-fill-1', 'wz-fill-2'];
+
+            backBtn.style.display = wzStep > 1 ? 'inline-flex' : 'none';
+            stepLbl.textContent = `Langkah ${wzStep} dari 3`;
+            nextBtn.textContent = wzStep === 3 ? '✅ Simpan Data' : 'Lanjut →';
+
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById(dots[i]);
+                el.classList.remove('active', 'done');
+                if (i < wzStep) el.classList.add('done');
+                else if (i === wzStep) el.classList.add('active');
+            }
+            for (let i = 1; i <= 2; i++) {
+                document.getElementById(fills[i]).style.width = wzStep > i ? '100%' : '0%';
+            }
+        }
+
+        // =====================================================================
+        // WIZARD STEPS CONFIG — 6 ML PIPELINE STAGES
+        // =====================================================================
+        const FEATURE_STEPS = {
+
+            // 1. Problem Framing & IPO Model
+            'problem-framing': {
+                s1_title: 'Jenis Problem',
+                s1_desc: 'Tentukan jenis masalah yang akan dipecahkan oleh model AI',
+                categories: [
+                    { key: 'klasifikasi', icon: '🏷️', name: 'Klasifikasi', desc: 'Memprediksi kategori/kelas data' },
+                    { key: 'regresi', icon: '📉', name: 'Regresi', desc: 'Memprediksi nilai numerik kontinu' },
+                    { key: 'klasterisasi', icon: '🔵', name: 'Klasterisasi', desc: 'Mengelompokkan data tanpa label' }
+                ],
+                s2_label1: 'Nama Proyek / Problem Statement',
+                s2_label2: 'Deskripsi Model IPO (Input → Proses → Output)',
+                s2_extra: [
+                    { id: 'wz-input-ipo', label: 'INPUT — Data masukan yang digunakan', placeholder: 'Contoh: Dataset gambar 28x28 pixel, data teks ulasan...' },
+                    { id: 'wz-proses-ipo', label: 'PROSES — Algoritma / transformasi yang diterapkan', placeholder: 'Contoh: CNN, preprocessing normalisasi, tokenisasi...' },
+                    { id: 'wz-output-ipo', label: 'OUTPUT — Keluaran / prediksi yang diharapkan', placeholder: 'Contoh: Label kelas, nilai harga, cluster ID...' }
+                ]
+            },
+
+            // 2. Definisi Dataset
+            'dataset-definition': {
+                s1_title: 'Sumber Dataset',
+                s1_desc: 'Dari mana dataset yang akan dibangun berasal?',
+                categories: [
+                    { key: 'publik', icon: '🌐', name: 'Dataset Publik', desc: 'Kaggle, UCI, HuggingFace, dll.' },
+                    { key: 'primer', icon: '🎙️', name: 'Data Primer', desc: 'Dikumpulkan sendiri / survei' },
+                    { key: 'sintesis', icon: '🧬', name: 'Data Sintetis', desc: 'Dibuat secara programatik / augmentasi' }
+                ],
+                s2_label1: 'Nama / Judul Dataset',
+                s2_label2: 'Deskripsi Dataset & Fitur Utama',
+                s2_extra: [
+                    { id: 'wz-jumlah-sampel', label: 'Jumlah Sampel / Baris Data', placeholder: 'Contoh: 10.000 sampel, 500 gambar...' },
+                    { id: 'wz-fitur-target', label: 'Fitur Target / Label (jika ada)', placeholder: 'Contoh: kolom "label", "harga", "kategori"...' },
+                    { id: 'wz-format-dataset', label: 'Format & Lokasi Dataset', placeholder: 'Contoh: CSV di /data/raw, JPEG di /images/...' }
+                ]
+            },
+
+            // 3. Pemrosesan Data
+            'data-processing': {
+                s1_title: 'Tahap Pemrosesan',
+                s1_desc: 'Pilih aktivitas utama pemrosesan data yang dilakukan',
+                categories: [
+                    { key: 'univariate', icon: '📊', name: 'Univariate Analysis', desc: 'Analisis distribusi satu variabel' },
+                    { key: 'multivariate', icon: '🔗', name: 'Multivariate Analysis', desc: 'Korelasi & hubungan antar variabel' },
+                    { key: 'feature-engineering', icon: '🛠️', name: 'Feature Engineering', desc: 'Rekayasa & seleksi fitur baru' }
+                ],
+                s2_label1: 'Nama Sesi Pemrosesan Data',
+                s2_label2: 'Ringkasan Temuan Analisis',
+                s2_extra: [
+                    { id: 'wz-univariate', label: 'Hasil Univariate Analysis', placeholder: 'Contoh: distribusi normal, outlier pada kolom usia...' },
+                    { id: 'wz-multivariate', label: 'Hasil Multivariate Analysis', placeholder: 'Contoh: korelasi tinggi antara X dan Y (r=0.87)...' },
+                    { id: 'wz-feature-eng', label: 'Rekayasa Fitur yang Dilakukan', placeholder: 'Contoh: normalisasi Min-Max, one-hot encoding kategori...' },
+                    { id: 'wz-split-dataset', label: 'Pembagian Dataset (Train/Val/Test)', placeholder: 'Contoh: 70% train, 15% val, 15% test...' }
+                ]
+            },
+
+            // 4. Perencanaan Model
+            'model-planning': {
+                s1_title: 'Arsitektur Model',
+                s1_desc: 'Pilih pendekatan arsitektur model cerdas yang direncanakan',
+                categories: [
+                    { key: 'deep-learning', icon: '🧠', name: 'Deep Learning', desc: 'CNN, RNN, Transformer' },
+                    { key: 'classical-ml', icon: '🌳', name: 'Classical ML', desc: 'SVM, Random Forest, XGBoost' },
+                    { key: 'ensemble', icon: '🔀', name: 'Ensemble / Hybrid', desc: 'Kombinasi beberapa model' }
+                ],
+                s2_label1: 'Nama Rencana Model',
+                s2_label2: 'Deskripsi Arsitektur & Alasan Pemilihan',
+                s2_extra: [
+                    { id: 'wz-baseline', label: 'Baseline Model (jika ada)', placeholder: 'Contoh: Logistic Regression sebagai baseline awal...' },
+                    { id: 'wz-hyperparams', label: 'Hyperparameter yang Direncanakan', placeholder: 'Contoh: lr=0.001, batch_size=32, dropout=0.3...' },
+                    { id: 'wz-refining-plan', label: 'Rencana Refining Model', placeholder: 'Contoh: Grid search tuning, early stopping, regularisasi L2...' }
+                ]
+            },
+
+            // 5. Pelatihan & Testing
+            'training-testing': {
+                s1_title: 'Mode Pelatihan',
+                s1_desc: 'Pilih paradigma pembelajaran yang digunakan',
+                categories: [
+                    { key: 'supervised', icon: '👨‍🏫', name: 'Supervised', desc: 'Belajar dengan data berlabel' },
+                    { key: 'transfer-learning', icon: '🔄', name: 'Transfer Learning', desc: 'Gunakan model pretrained' },
+                    { key: 'semi-supervised', icon: '🔍', name: 'Semi-Supervised', desc: 'Sebagian data tidak berlabel' }
+                ],
+                s2_label1: 'Nama Sesi Pelatihan',
+                s2_label2: 'Konfigurasi Training (Epochs, Optimizer, dll.)',
+                s2_extra: [
+                    { id: 'wz-train-accuracy', label: 'Hasil Training Accuracy / Loss', placeholder: 'Contoh: Epoch 50 — accuracy: 94.2%, loss: 0.18...' },
+                    { id: 'wz-test-accuracy', label: 'Hasil Testing / Evaluasi Model', placeholder: 'Contoh: Test accuracy: 91.5%, F1-score: 0.91...' },
+                    { id: 'wz-confusion', label: 'Catatan Confusion Matrix / Metrik Lain', placeholder: 'Contoh: Precision 0.93, Recall 0.90, ROC-AUC: 0.97...' }
+                ]
+            },
+
+            // 6. Refining Model
+            'model-refining': {
+                s1_title: 'Strategi Refining',
+                s1_desc: 'Pilih pendekatan yang digunakan untuk meningkatkan performa model',
+                categories: [
+                    { key: 'hyperparameter-tuning', icon: '🎛️', name: 'Hyperparameter Tuning', desc: 'Grid search, random search, Bayesian' },
+                    { key: 'architecture-change', icon: '🏗️', name: 'Ubah Arsitektur', desc: 'Tambah/kurangi layer, attention head' },
+                    { key: 'data-augmentation', icon: '🔁', name: 'Augmentasi Data', desc: 'Perbanyak data training sintetis' }
+                ],
+                s2_label1: 'Nama Sesi Refining',
+                s2_label2: 'Perubahan yang Dilakukan',
+                s2_extra: [
+                    { id: 'wz-before-metric', label: 'Performa SEBELUM Refining', placeholder: 'Contoh: accuracy: 88.0%, F1: 0.87...' },
+                    { id: 'wz-after-metric', label: 'Performa SETELAH Refining', placeholder: 'Contoh: accuracy: 93.5%, F1: 0.93...' },
+                    { id: 'wz-refining-notes', label: 'Catatan Iterasi & Lesson Learned', placeholder: 'Contoh: Dropout 0.4 lebih baik dari 0.2, batch 64 optimal...' }
+                ]
+            }
+        };
+
+        function renderWizardStep() {
+            const body = document.getElementById('wz-body');
+            const fKey = currentFeature ? currentFeature.key : 'problem-framing';
+            const stepConfig = FEATURE_STEPS[fKey] || FEATURE_STEPS['problem-framing'];
+
+            const titles = ['', stepConfig.s1_title, 'Isi Detail & Dokumentasi', 'Review & Konfirmasi'];
+            const subs = ['', stepConfig.s1_desc, 'Lengkapi seluruh informasi yang diperlukan', 'Pastikan semua data sudah benar sebelum disimpan'];
+
+            document.getElementById('wz-title').textContent = titles[wzStep];
+            document.getElementById('wz-subtitle').textContent = subs[wzStep];
+            updateWizardNav();
+
+            if (wzStep === 1) {
+                let uploadHtml = '';
+                if (fKey === 'problem-framing') {
+                    uploadHtml = `
+                    <label style="display:block; background:rgba(168, 85, 247, 0.05); border: 2px dashed rgba(168, 85, 247, 0.5); border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; margin-bottom: 20px; transition: 0.3s;" onmouseover="this.style.borderColor='#a855f7'" onmouseout="this.style.borderColor='rgba(168, 85, 247, 0.5)'">
+                        <div style="font-size: 2.5rem; margin-bottom: 10px;">🤖</div>
+                        <h3 style="margin:0 0 5px 0;">Auto-Framing dengan AI</h3>
+                        <p style="color:#94a3b8; font-size:0.85rem; margin:0;">Upload Gambar atau File (CSV/Teks) untuk otomatis membuat kerangka IPO</p>
+                        <input type="file" id="framing-file" style="display:none" onchange="handleFramingUpload(event)">
+                        <div id="framing-loading" style="display:none; margin-top:15px; color:#38bdf8; font-weight:bold;">Menganalisis file...</div>
+                    </label>
+                    <div style="text-align:center; margin-bottom: 15px; color:#94a3b8; font-size:0.85rem;">— ATAU PILIH MANUAL —</div>
+                    `;
+                }
+
+                body.innerHTML = uploadHtml + `<div class="cat-grid">
+                    ${stepConfig.categories.map(c => `
+                    <div class="cat-card ${wzData.category === c.key ? 'selected' : ''}" onclick="selectCategory('${c.key}', '${c.name}')">
+                        <div class="cat-check">✓</div>
+                        <div class="cat-icon">${c.icon}</div>
+                        <div class="cat-name">${c.name}</div>
+                        <div class="cat-desc">${c.desc}</div>
+                    </div>`).join('')}
+                </div>`;
+            }
+
+            else if (wzStep === 2) {
+                const cat = stepConfig.categories.find(c => c.key === wzData.category) || stepConfig.categories[0];
+                const extraFields = stepConfig.s2_extra || [];
+
+                let extraHtml = extraFields.map(ef => `
+                <div class="wz-form-group">
+                    <label class="wz-label">${ef.label}</label>
+                    <textarea class="wz-textarea" id="${ef.id}" placeholder="${ef.placeholder}" oninput="wzData.extra['${ef.id}']=this.value" style="min-height:72px;">${wzData.extra[ef.id] || ''}</textarea>
+                </div>`).join('');
+
+                body.innerHTML = `
+                <div class="wz-form-group">
+                    <label class="wz-label">${stepConfig.s2_label1} <span>*</span></label>
+                    <input class="wz-input" id="wz-title-input" placeholder="Masukkan judul..." value="${wzData.title}" oninput="wzData.title=this.value">
+                </div>
+                <div class="wz-form-group">
+                    <label class="wz-label">${stepConfig.s2_label2}</label>
+                    <textarea class="wz-textarea" id="wz-content-input" placeholder="Deskripsi umum..." oninput="wzData.content=this.value">${wzData.content}</textarea>
+                </div>
+                ${extraHtml}
+                <div class="wz-form-group">
+                    <label class="wz-label">Tags <span style="color:var(--muted);font-weight:400;">(opsional)</span></label>
+                    <div class="wz-tags-input" id="wz-tags-wrap" onclick="document.getElementById('wz-tag-input').focus()">
+                        ${wzData.tags.map(t => `<span class="wz-tag">${t}<button onclick="removeWzTag('${t}')" type="button">×</button></span>`).join('')}
+                        <input class="wz-tag-bare-input" id="wz-tag-input" placeholder="Ketik tag, tekan Enter..." onkeydown="handleTagKey(event)">
+                    </div>
+                    <p class="wz-hint">💡 Tekan Enter atau koma untuk menambah tag</p>
+                </div>
+                <div style="padding:12px 16px;border-radius:12px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.4rem">${cat.icon}</span>
+                    <span style="font-size:0.85rem;color:#c4b5fd;">Terpilih: <strong>${cat.name}</strong> — ${cat.desc}</span>
+                </div>`;
+                setTimeout(() => document.getElementById('wz-title-input')?.focus(), 50);
+            }
+
+            else if (wzStep === 3) {
+                const cat = stepConfig.categories.find(c => c.key === wzData.category) || stepConfig.categories[0];
+                const tagsHtml = wzData.tags.length
+                    ? wzData.tags.map(t => `<span class="wz-tag">${t}</span>`).join(' ')
+                    : '<span style="color:var(--muted);font-size:0.85rem;">—</span>';
+                const extraFields = stepConfig.s2_extra || [];
+                const extraReviewRows = extraFields.map(ef => `
+                    <div class="review-row">
+                        <div class="review-key" style="width:140px;font-size:0.72rem;">${ef.label.split('—')[0].trim()}</div>
+                        <div class="review-val" style="color:rgba(255,255,255,0.75);font-size:0.85rem;">${wzData.extra[ef.id] || '<em style="color:var(--muted)">—</em>'}</div>
+                    </div>`).join('');
+
+                body.innerHTML = `
+                <div class="review-success-icon">${currentFeature ? currentFeature.icon : '🎯'}</div>
+                <p style="text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:20px;">Periksa ringkasan dokumentasi Anda sebelum disimpan</p>
+                <div class="review-card">
+                    <div class="review-row">
+                        <div class="review-key">Kategori</div>
+                        <div class="review-val"><span class="review-badge">${cat.icon} ${cat.name}</span></div>
+                    </div>
+                    <div class="review-row">
+                        <div class="review-key">${stepConfig.s2_label1}</div>
+                        <div class="review-val" style="font-weight:600;">${wzData.title || '—'}</div>
+                    </div>
+                    <div class="review-row">
+                        <div class="review-key" style="width:140px;">Deskripsi</div>
+                        <div class="review-val" style="color:rgba(255,255,255,0.75);font-size:0.85rem;">${wzData.content || '<em style="color:var(--muted)">Tidak ada deskripsi</em>'}</div>
+                    </div>
+                    ${extraReviewRows}
+                    <div class="review-row">
+                        <div class="review-key">Tags</div>
+                        <div class="review-val">${tagsHtml}</div>
+                    </div>
+                </div>`;
+            }
+        }
+
+        function selectCategory(key, type) {
+            wzData.category = key;
+            wzData.dataType = type;
+            document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        function handleTagKey(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const val = e.target.value.trim().replace(',', '');
+                if (val && !wzData.tags.includes(val)) {
+                    wzData.tags.push(val);
+                    renderWizardStep();
+                } else { e.target.value = ''; }
+            }
+        }
+
+        function removeWzTag(tag) {
+            wzData.tags = wzData.tags.filter(t => t !== tag);
+            renderWizardStep();
+        }
+
+        async function wizardNext() {
+            if (wzStep === 1) {
+                if (!wzData.category) { showToast('Pilih kategori terlebih dahulu', 'error'); return; }
+                wzStep = 2;
+                renderWizardStep();
+            } else if (wzStep === 2) {
+                if (!wzData.title.trim()) { showToast('Judul tidak boleh kosong', 'error'); return; }
+                wzStep = 3;
+                renderWizardStep();
+            } else if (wzStep === 3) {
+                await saveWizardData();
+            }
+        }
+
+        function wizardBack() {
+            if (wzStep > 1) { wzStep--; renderWizardStep(); }
+        }
+
+        const PIPELINE_ORDER = [
+            'problem-framing', 'dataset-definition', 'data-processing',
+            'model-planning', 'training-testing', 'model-refining'
+        ];
+
+        async function handleFramingUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('framing-loading').style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/ml/framing', { method: 'POST', body: formData });
+                const contentType = res.headers.get("content-type");
+
+                if (!contentType || !contentType.includes("application/json")) {
+                    console.error("Non-JSON response received:", await res.text());
+                    throw new Error("Sistem API gagal merespons. Pastikan Anda membuka web ini melalui http://localhost:8000 (Django Server) atau http://localhost:3000 (Node.js Server), BUKAN dari Live Server VS Code.");
+                }
+
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Gagal memproses file');
+
+                // Auto-fill form
+                wzData.category = data.category || 'klasifikasi';
+                wzData.title = data.title;
+                if (!wzData.extra) wzData.extra = {};
+                wzData.extra['wz-input-ipo'] = data.input;
+                wzData.extra['wz-proses-ipo'] = data.process;
+                wzData.extra['wz-output-ipo'] = data.output;
+
+                showToast('✅ AI Framing Berhasil!', 'success');
+
+                // Lanjut ke step 2 otomatis
+                wzStep = 2;
+                renderWizardStep();
+
+            } catch (err) {
+                showToast(err.message, 'error');
+                document.getElementById('framing-loading').style.display = 'none';
+            }
+        }
+
+        // Build full content string from extra fields
+        function buildFullContent(stepConfig) {
+            const parts = [];
+            if (wzData.content) parts.push('=== Deskripsi Umum ===\n' + wzData.content);
+            const extraFields = stepConfig.s2_extra || [];
+            extraFields.forEach(ef => {
+                const val = wzData.extra[ef.id] || '';
+                if (val) parts.push('\n=== ' + ef.label.split('—')[0].trim() + ' ===\n' + val);
+            });
+            if (wzData.tags && wzData.tags.length) parts.push('\n=== Tags ===\n' + wzData.tags.join(', '));
+            return parts.join('\n');
+        }
+
+        async function saveWizardData() {
+            const btn = document.getElementById('wz-btn-next');
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+            try {
+                const key = currentFeature.key;
+                const fKey = currentFeature.key;
+                const stepConfig = FEATURE_STEPS[fKey];
+                const fullContent = buildFullContent(stepConfig);
+                let payload = {};
+
+                // Map 6 ML pipeline stages to existing API endpoints
+                if (key === 'problem-framing') {
+                    // → /api/data-collection
+                    payload = {
+                        title: wzData.title,
+                        content: fullContent,
+                        category: wzData.category,
+                        data_type: 'problem-framing',
+                        tags: wzData.tags
+                    };
+                } else if (key === 'dataset-definition') {
+                    // → /api/analysis
+                    payload = {
+                        title: wzData.title,
+                        method: wzData.category || 'statistical',
+                        data_entry_id: null
+                    };
+                    // Append extra to title as analysis title includes all info
+                    payload.title = wzData.title;
+                } else if (key === 'data-processing') {
+                    // → /api/visualization (used as processing log)
+                    payload = {
+                        title: wzData.title,
+                        data_source: fullContent,
+                        chart_type: wzData.category || 'bar'
+                    };
+                } else if (key === 'model-planning') {
+                    // → /api/models
+                    payload = {
+                        name: wzData.title,
+                        description: fullContent,
+                        model_type: wzData.category === 'deep-learning' ? 'neural_network'
+                            : wzData.category === 'classical-ml' ? 'classification' : 'classification'
+                    };
+                } else if (key === 'training-testing') {
+                    // → /api/training
+                    payload = {
+                        name: wzData.title,
+                        dataset: wzData.content,
+                        epochs: 50
+                    };
+                } else if (key === 'model-refining') {
+                    // → /api/insights
+                    payload = {
+                        title: wzData.title,
+                        content: fullContent,
+                        insight_type: 'recommendation'
+                    };
+                } else {
+                    payload = { title: wzData.title, content: fullContent };
+                }
+
+                const res = await fetch(currentFeature.endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Gagal menyimpan data');
+                }
+
+                const nextIdx = PIPELINE_ORDER.indexOf(key) + 1;
+
+                if (nextIdx > 0 && nextIdx < PIPELINE_ORDER.length) {
+                    const nextKey = PIPELINE_ORDER[nextIdx];
+                    const nextFeature = FEATURES.find(f => f.key === nextKey);
+                    showToast('✅ Tersimpan! Lanjut ke: ' + nextFeature.title, 'success');
+                    setTimeout(() => {
+                        currentFeature = nextFeature;
+                        wzStep = 1;
+                        wzData = { category: '', dataType: '', title: '', content: '', tags: [], extra: {} };
+                        renderWizardStep();
+                    }, 1200);
+                } else {
+                    showToast('🎉 Seluruh 6 tahap ML Pipeline telah terdokumentasi!', 'success');
+                    document.getElementById('wizard-overlay').classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+
+                await loadStats();
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Simpan Data';
+            }
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(e); });
+
+
+        // =====================================================================
+        // PROFILE
+        // =====================================================================
+        let profileData = {
+            name: 'User',
+            email: '',
+            role: 'Member',
+            location: '',
+            memberSince: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+            photoUrl: null
+        };
+        let profileEditMode = false;
+
+        function openProfile() {
+            renderProfileView();
+            document.getElementById('profile-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeProfile(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('profile-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+            if (profileEditMode) cancelProfileEdit();
+        }
+
+        function renderProfileView() {
+            const grid = document.getElementById('profile-info-grid');
+            grid.innerHTML = `
+            <div class="profile-field">
+                <div class="profile-field-label"><span>👤</span> Full Name</div>
+                <div class="profile-field-value">${profileData.name || '—'}</div>
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>✉️</span> Email Address</div>
+                <div class="profile-field-value" style="font-size:0.9rem">${profileData.email || '—'}</div>
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>💼</span> Role</div>
+                <div class="profile-field-value">${profileData.role || '—'}</div>
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>📍</span> Location</div>
+                <div class="profile-field-value">${profileData.location || '—'}</div>
+            </div>
+        `;
+            document.getElementById('profile-member-since').textContent = 'Member since ' + profileData.memberSince;
+            document.getElementById('profile-save-btns').style.display = 'none';
+            document.getElementById('profile-edit-toggle').style.display = 'inline-flex';
+            renderProfileAvatar();
+        }
+
+        function renderProfileEditMode() {
+            const grid = document.getElementById('profile-info-grid');
+            grid.innerHTML = `
+            <div class="profile-field">
+                <div class="profile-field-label"><span>👤</span> Full Name</div>
+                <input class="profile-edit-input" id="edit-name" value="${profileData.name}" placeholder="Nama lengkap">
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>✉️</span> Email Address</div>
+                <input class="profile-edit-input" id="edit-email" type="email" value="${profileData.email}" placeholder="Email">
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>💼</span> Role</div>
+                <input class="profile-edit-input" id="edit-role" value="${profileData.role}" placeholder="Role / Jabatan">
+            </div>
+            <div class="profile-field">
+                <div class="profile-field-label"><span>📍</span> Location</div>
+                <input class="profile-edit-input" id="edit-location" value="${profileData.location}" placeholder="Kota, Negara">
+            </div>
+        `;
+            document.getElementById('profile-save-btns').style.display = 'flex';
+            document.getElementById('profile-edit-toggle').style.display = 'none';
+        }
+
+        function toggleProfileEdit() {
+            profileEditMode = true;
+            renderProfileEditMode();
+        }
+
+        function cancelProfileEdit() {
+            profileEditMode = false;
+            renderProfileView();
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('edit-name')?.value.trim();
+            const email = document.getElementById('edit-email')?.value.trim();
+            const role = document.getElementById('edit-role')?.value.trim();
+            const location = document.getElementById('edit-location')?.value.trim();
+
+            if (!name) { showToast('Nama tidak boleh kosong', 'error'); return; }
+
+            profileData.name = name || profileData.name;
+            profileData.email = email || profileData.email;
+            profileData.role = role || profileData.role;
+            profileData.location = location || profileData.location;
+
+            profileEditMode = false;
+            renderProfileView();
+            updateHeaderChip();
+            saveProfileLocal();
+            showToast('Profil berhasil disimpan!', 'success');
+        }
+
+        function triggerPhotoUpload() {
+            document.getElementById('photo-file-input').click();
+        }
+
+        let cameraStream = null;
+        let snapshotDataUrl = null;
+
+        async function openCameraModal() {
+            const overlay = document.getElementById('camera-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('cam-live-view').style.display = 'flex';
+            document.getElementById('cam-preview-view').style.display = 'none';
+            document.getElementById('cam-countdown').style.display = 'none';
+            document.getElementById('cam-status').textContent = 'Posisikan wajah Anda di dalam bingkai';
+            document.getElementById('cam-capture-btn').disabled = false;
+            document.body.style.overflow = 'hidden';
+
+            const video = document.getElementById('camera-video');
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+                });
+                video.srcObject = cameraStream;
+                video.play();
+                document.getElementById('cam-status').textContent = 'Kamera aktif — siap untuk mengambil foto';
+            } catch (err) {
+                showToast('❌ Kamera tidak dapat diakses. Pastikan izin kamera sudah diberikan.', 'error');
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+                console.error(err);
+            }
+        }
+
+        function closeCameraModal() {
+            const overlay = document.getElementById('camera-overlay');
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            snapshotDataUrl = null;
+        }
+
+        function startCountdown() {
+            const btn = document.getElementById('cam-capture-btn');
+            btn.disabled = true;
+            const countdownEl = document.getElementById('cam-countdown');
+            const numEl = document.getElementById('cam-countdown-num');
+            const statusEl = document.getElementById('cam-status');
+            countdownEl.style.display = 'flex';
+
+            let count = 3;
+            numEl.textContent = count;
+            numEl.style.animation = 'none';
+            void numEl.offsetWidth; // reflow
+            numEl.style.animation = 'countPulse 1s ease';
+            statusEl.textContent = 'Bersiap...';
+
+            const interval = setInterval(() => {
+                count--;
+                if (count <= 0) {
+                    clearInterval(interval);
+                    countdownEl.style.display = 'none';
+                    takeSnapshot();
+                    return;
+                }
+                numEl.textContent = count;
+                numEl.style.animation = 'none';
+                void numEl.offsetWidth;
+                numEl.style.animation = 'countPulse 1s ease';
+            }, 1000);
+        }
+
+        function takeSnapshot() {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            if (!cameraStream || !video.videoWidth) {
+                showToast('Kamera belum siap, coba lagi.', 'error');
+                document.getElementById('cam-capture-btn').disabled = false;
+                return;
+            }
+
+            // Mirror-flip to match the CSS transform:scaleX(-1)
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            snapshotDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+            // Show preview
+            document.getElementById('cam-live-view').style.display = 'none';
+            document.getElementById('cam-preview-view').style.display = 'flex';
+            document.getElementById('cam-preview-img').src = snapshotDataUrl;
+        }
+
+        function retakePhoto() {
+            snapshotDataUrl = null;
+            document.getElementById('cam-preview-view').style.display = 'none';
+            document.getElementById('cam-live-view').style.display = 'flex';
+            document.getElementById('cam-capture-btn').disabled = false;
+            document.getElementById('cam-status').textContent = 'Kamera aktif — siap untuk mengambil foto';
+        }
+
+        function confirmSnapshot() {
+            if (!snapshotDataUrl) return;
+            profileData.photoUrl = snapshotDataUrl;
+            renderProfileAvatar();
+            updateHeaderChip();
+            saveProfileLocal();
+            showToast('✅ Foto profil dari kamera berhasil diperbarui!', 'success');
+            closeCameraModal();
+        }
+
+        function handlePhotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) { showToast('File harus berupa gambar', 'error'); return; }
+            if (file.size > 5 * 1024 * 1024) { showToast('Ukuran file maks 5MB', 'error'); return; }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                profileData.photoUrl = e.target.result;
+                renderProfileAvatar();
+                updateHeaderChip();
+                saveProfileLocal();
+                showToast('Foto profil diperbarui!', 'success');
+            };
+            reader.readAsDataURL(file);
+            // Reset input so same file can be re-selected
+            event.target.value = '';
+        }
+
+        function renderProfileAvatar() {
+            const img = document.getElementById('profile-avatar-img');
+            const placeholder = document.getElementById('profile-avatar-placeholder');
+            if (profileData.photoUrl) {
+                img.src = profileData.photoUrl;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+        }
+
+        function updateHeaderChip() {
+            const avatar = document.getElementById('user-avatar');
+            const nameEl = document.getElementById('user-name');
+            if (nameEl) nameEl.textContent = profileData.name;
+
+            if (profileData.photoUrl) {
+                avatar.innerHTML = '';
+                avatar.style.background = 'none';
+                avatar.style.padding = '0';
+                avatar.style.overflow = 'hidden';
+                const img = document.createElement('img');
+                img.src = profileData.photoUrl;
+                img.className = 'user-chip-img';
+                avatar.appendChild(img);
+            } else {
+                avatar.innerHTML = (profileData.name || 'U')[0].toUpperCase();
+                avatar.style.background = 'linear-gradient(135deg, var(--purple), var(--pink))';
+            }
+        }
+
+        function saveProfileLocal() {
+            try { localStorage.setItem('ic_profile', JSON.stringify(profileData)); } catch (e) { }
+        }
+
+        function loadProfileLocal() {
+            try {
+                const saved = localStorage.getItem('ic_profile');
+                if (saved) {
+                    profileData = { ...profileData, ...JSON.parse(saved) };
+                    updateHeaderChip();
+                }
+            } catch (e) { }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && document.getElementById('profile-overlay').classList.contains('active')) {
+                closeProfile();
+            }
+        });
+
+        // =====================================================================
+        // DASHBOARD CHART
+        // =====================================================================
+        function initDashboardChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+
+            // Gradient for Data Processing
+            const gradientData = ctx.createLinearGradient(0, 0, 0, 320);
+            gradientData.addColorStop(0, 'rgba(124, 58, 237, 0.5)'); // purple
+            gradientData.addColorStop(1, 'rgba(124, 58, 237, 0.01)');
+
+            // Gradient for Model Training
+            const gradientModel = ctx.createLinearGradient(0, 0, 0, 320);
+            gradientModel.addColorStop(0, 'rgba(6, 182, 212, 0.5)'); // cyan
+            gradientModel.addColorStop(1, 'rgba(6, 182, 212, 0.01)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                    datasets: [
+                        {
+                            label: 'Data Processing',
+                            data: [120, 190, 150, 220, 180, 90, 110],
+                            borderColor: '#7c3aed',
+                            backgroundColor: gradientData,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#111127',
+                            pointBorderColor: '#7c3aed',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Model Training',
+                            data: [40, 60, 120, 100, 160, 210, 180],
+                            borderColor: '#06b6d4',
+                            backgroundColor: gradientModel,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#111127',
+                            pointBorderColor: '#06b6d4',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: '#f8fafc',
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                font: {
+                                    family: "'DM Sans', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 17, 39, 0.9)',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            titleFont: { family: "'Syne', sans-serif", size: 14, weight: 'bold' },
+                            bodyFont: { family: "'DM Sans', sans-serif", size: 13 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { family: "'DM Sans', sans-serif" }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { family: "'DM Sans', sans-serif" },
+                                stepSize: 50
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        // =====================================================================
+        // INBOX SUBMISSIONS — In-Dashboard Section
+        // =====================================================================
+        let allInboxSubmissions = [];
+        let selectedSubmission = null;
+        let inboxRefreshInterval = null;
+
+        async function loadInboxSubmissions(showSpinner = false) {
+            const list = document.getElementById('inbox-list');
+            const refreshBtn = document.getElementById('inbox-refresh');
+
+            if (showSpinner) {
+                refreshBtn.style.opacity = '0.5';
+            } else if (allInboxSubmissions.length === 0) {
+                list.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+            }
+
+            try {
+                const res = await fetch('/api/submissions/list/');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Gagal memuat');
+
+                allInboxSubmissions = data.submissions || [];
+                document.getElementById('inbox-count').textContent = data.stats?.total || 0;
+                applyInboxFilters();
+
+                if (showSpinner) showToast('Inbox diperbarui', 'success');
+            } catch (err) {
+                list.innerHTML = `
+                    <div class="inbox-empty">
+                        <div class="inbox-empty-icon">⚠️</div>
+                        <p style="color:#f87171;">Gagal memuat: ${err.message}</p>
+                    </div>`;
+            } finally {
+                refreshBtn.style.opacity = '1';
+            }
+        }
+
+        function applyInboxFilters() {
+            const search = document.getElementById('inbox-search').value.trim().toLowerCase();
+            const sourceFilter = document.getElementById('inbox-source-filter').value;
+            const statusFilter = document.getElementById('inbox-status-filter').value;
+
+            let filtered = [...allInboxSubmissions];
+            if (search) {
+                filtered = filtered.filter(s =>
+                    (s.title || '').toLowerCase().includes(search) ||
+                    (s.sender_name || '').toLowerCase().includes(search)
+                );
+            }
+            if (sourceFilter) filtered = filtered.filter(s => s.source === sourceFilter);
+            if (statusFilter) filtered = filtered.filter(s => s.status === statusFilter);
+
+            renderInboxList(filtered);
+        }
+
+        function renderInboxList(submissions) {
+            const list = document.getElementById('inbox-list');
+            if (!submissions.length) {
+                list.innerHTML = `
+                    <div class="inbox-empty">
+                        <div class="inbox-empty-icon">📭</div>
+                        <p>Belum ada submission yang sesuai filter.</p>
+                    </div>`;
+                return;
+            }
+            list.innerHTML = submissions.map(s => `
+                <div class="inbox-item">
+                    <div class="inbox-item-icon">${s.icon}</div>
+                    <div class="inbox-item-info">
+                        <div class="inbox-item-title-row">
+                            <span class="inbox-item-title">${escapeHtml(s.title)}</span>
+                            <span class="inbox-badge badge-${s.source}">${s.source_label}</span>
+                            <span class="status-pill status-${s.status}">${getStatusIcon(s.status)} ${s.status}</span>
+                        </div>
+                        <div class="inbox-item-meta">
+                            <span>👤 ${escapeHtml(s.sender_name)}</span>
+                            <span class="dot">·</span>
+                            <span>📄 ${s.data_type}</span>
+                            <span class="dot">·</span>
+                            <span>📦 ${s.file_size_mb} MB</span>
+                            <span class="dot">·</span>
+                            <span>⏰ ${s.time_relative}</span>
+                        </div>
+                    </div>
+                    <button class="btn-process" onclick="openProcessChoice(${s.id})">
+                        Proses →
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                pending: '⏳', in_progress: '🔄', completed: '✅',
+                sent: '📤', rejected: '❌'
+            };
+            return icons[status] || '•';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // =====================================================================
+        // PROCESS CHOICE MODAL
+        // =====================================================================
+        function openProcessChoice(submissionId) {
+            selectedSubmission = allInboxSubmissions.find(s => s.id === submissionId);
+            if (!selectedSubmission) return;
+
+            document.getElementById('choice-subtitle').textContent =
+                `Pilih metode untuk: "${selectedSubmission.title}"`;
+            document.getElementById('choice-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeChoiceModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('choice-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        async function processWithAI() {
+            if (!selectedSubmission) return;
+            closeChoiceModal();
+
+            showToast('🤖 AI Framing: Memproses "' + selectedSubmission.title + '"...', 'success');
+
+            // Set current feature ke problem-framing & buka wizard
+            currentFeature = FEATURES.find(f => f.key === 'problem-framing');
+            openWizard();
+
+            // Tunggu wizard render, lalu auto-trigger AI di step 1
+            setTimeout(() => {
+                showToast('💡 Klik upload Auto-Framing AI untuk lanjut', 'success');
+            }, 600);
+        }
+
+        function processWithManual() {
+            if (!selectedSubmission) return;
+            closeChoiceModal();
+
+            // Set current feature & pre-fill data dari submission
+            currentFeature = FEATURES.find(f => f.key === 'problem-framing');
+
+            // Buka wizard
+            openWizard();
+
+            // Pre-fill data submission ke wizard
+            setTimeout(() => {
+                wzData.title = selectedSubmission.title;
+                wzData.content = selectedSubmission.description ||
+                    `File: ${selectedSubmission.file_name} (${selectedSubmission.data_type}, ${selectedSubmission.file_size_mb} MB)\nDari: ${selectedSubmission.sender_name}`;
+                showToast('✏️ Manual mode: Lengkapi 6 tahap pipeline', 'success');
+            }, 300);
+        }
+
+        // Auto-refresh inbox tiap 15 detik
+        function startInboxAutoRefresh() {
+            if (inboxRefreshInterval) clearInterval(inboxRefreshInterval);
+            inboxRefreshInterval = setInterval(() => {
+                loadInboxSubmissions(false);
+            }, 15000);
+        }
+
+
+        // =====================================================================
+        // INIT
+        // =====================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hide main content initially
+            const main = document.getElementById('main-content');
+            main.style.display = 'none';
+
+            loadProfileLocal();
+            renderFeatures();
+            initDashboardChart();
+            initSequence();
+            // ⭐ Load Inbox Submissions
+            loadInboxSubmissions();
+            startInboxAutoRefresh();
+
+
+            // Greet user
+            const hour = new Date().getHours();
+            const greet = hour < 12 ? 'Selamat pagi' : hour < 17 ? 'Selamat siang' : 'Selamat malam';
+            const el = document.getElementById('hero-greeting');
+            if (el) el.textContent = greet;
+        });
+    </script>
+
+</body>
+
+</html>

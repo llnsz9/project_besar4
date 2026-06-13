@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Intelligence Creation</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            padding: 20px;
+        }
+        .auth-container {
+            background: var(--bg-card);
+            padding: 50px 40px;
+            border-radius: 20px;
+            border: 1px solid var(--border-glass);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+        .auth-logo {
+            margin-bottom: 30px;
+        }
+        .auth-logo img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .auth-logo h1 {
+            font-size: 1.8rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 15px;
+        }
+        .auth-logo p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            color: var(--white);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid var(--border-glass);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            background: var(--bg-dark);
+            color: var(--white);
+            transition: border-color 0.3s;
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+        .auth-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .auth-error.show {
+            display: block;
+        }
+        .auth-footer {
+            margin-top: 25px;
+            color: var(--text-muted);
+        }
+        .auth-footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-logo">
+            <img src="{% static 'sequence/ezgif-frame-001.jpg' %}" class="sequence-logo" alt="Logo">
+            <h1>Intelligence Creation</h1>
+            <p>Masuk ke akun Anda</p>
+        </div>
+
+        <div id="error-message" class="auth-error"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Masukkan email Anda" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Masukkan password Anda" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-auth">
+                <i class="fas fa-sign-in-alt"></i> Masuk
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Belum punya akun? <a href="/register.html">Daftar di sini</a></p>
+            <p style="margin-top: 15px;"><a href="/">← Kembali ke Beranda</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-message');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errorEl.textContent = data.error;
+                    errorEl.classList.add('show');
+                    return;
+                }
+
+                window.location.href = '/dashboard.html';
+            } catch (err) {
+                errorEl.textContent = 'Terjadi kesalahan jaringan';
+                errorEl.classList.add('show');
+            }
+        });
+    </script>
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

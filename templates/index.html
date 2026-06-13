@@ -1,0 +1,632 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Intelligence Creation</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .animate {
+            opacity: 0;
+        }
+
+        .animate.fade {
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .animate.left {
+            animation: slideInLeft 0.8s ease forwards;
+        }
+
+        .animate.right {
+            animation: slideInRight 0.8s ease forwards;
+        }
+
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.6s;
+        }
+
+        .delay-4 {
+            animation-delay: 0.8s;
+        }
+
+        .delay-5 {
+            animation-delay: 1s;
+        }
+
+        .delay-6 {
+            animation-delay: 1.2s;
+        }
+
+        /* ===== TEAM PHOTO UPLOAD STYLES ===== */
+        .team-avatar {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            flex-shrink: 0;
+        }
+
+        .team-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .team-avatar .avatar-icon {
+            font-size: 2.2rem;
+            color: #fff;
+        }
+
+        /* Hover overlay — subtle dim only */
+        .team-avatar .avatar-hover-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+            border-radius: 50%;
+            transition: background 0.25s;
+        }
+
+        .team-avatar:hover .avatar-hover-overlay {
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        /* Camera badge — bottom right corner */
+        .team-avatar::after {
+            content: "\f030";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 26px;
+            height: 26px;
+            background: #7c3aed;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: #fff;
+            border: 2px solid #0d0d20;
+            transition: background 0.2s, transform 0.2s;
+            z-index: 2;
+        }
+
+        .team-avatar:hover::after {
+            background: #9333ea;
+            transform: scale(1.12);
+        }
+
+        /* Glow ring on hover */
+        .team-avatar:hover {
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.6), 0 0 20px rgba(124, 58, 237, 0.4);
+        }
+
+        /* Badge "has photo" */
+        .team-card.has-photo .team-avatar {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Hidden file inputs */
+        .team-photo-input {
+            display: none;
+        }
+
+        /* Toast */
+        .ic-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ic-toast-item {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 13px 18px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: toastSlide 0.35s ease;
+            min-width: 200px;
+        }
+
+        .ic-toast-item.success {
+            border-left: 3px solid #10b981;
+        }
+
+        .ic-toast-item.error {
+            border-left: 3px solid #ef4444;
+        }
+
+        @keyframes toastSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Upload progress ring */
+        .team-avatar .upload-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #7c3aed;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .team-avatar.uploading .upload-ring {
+            display: block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo animate left">
+                <img src="{% static 'sequence/ezgif-frame-001.jpg' %}" class="sequence-logo" alt="Logo"
+                    style="width: 40px; height: 40px; border-radius: 50%;">
+                <span>Intelligence Creation</span>
+            </div>
+            <div class="nav-links animate fade delay-2">
+                <a href="#home">Home</a>
+                <a href="#about">About</a>
+                <a href="#team">Team</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="nav-auth animate right delay-3">
+                <a href="/login.html" class="btn btn-login">Sign In</a>
+                <a href="/register.html" class="btn btn-register">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <i class="fas fa-brain hero-logo animate fade delay-1"></i>
+            <h1 class="hero-subtitle animate fade delay-2">Welcome to</h1>
+            <h2 class="hero-title animate fade delay-3">Intelligence Creation</h2>
+            <p class="hero-desc animate fade delay-4">Platform manajemen kecerdasan buatan modern. Kelola data, model
+                AI, dan kolaborasi tim dalam satu platform.</p>
+            <div class="hero-buttons animate fade delay-5">
+                <a href="/register.html" class="btn btn-primary btn-animate">
+                    <i class="fas fa-rocket"></i> Get Started
+                </a>
+                <a href="#about" class="btn btn-secondary btn-animate">
+                    <i class="fas fa-play"></i> Learn More
+                </a>
+            </div>
+            <div class="hero-stats animate fade delay-6">
+                <div class="stat-item">
+                    <span class="stat-number">8+</span>
+                    <span class="stat-label">AI Features</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Users</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">98%</span>
+                    <span class="stat-label">Accuracy</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title animate fade">Tentang Kami</h2>
+                <p class="section-subtitle animate fade delay-1">8 Poin Tentang Intelligence Creation</p>
+            </div>
+            <div class="about-grid">
+                <div class="about-card animate fade delay-1">
+                    <div class="about-icon"><i class="fas fa-brain"></i></div>
+                    <h3>1. AI Technology</h3>
+                    <p>Platform dengan teknologi AI terbaru untuk pengelolaan data dan model.</p>
+                </div>
+                <div class="about-card animate fade delay-2">
+                    <div class="about-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3>2. Keamanan Data</h3>
+                    <p>Data dan model AI dilindungi dengan sistem keamanan terbaik.</p>
+                </div>
+                <div class="about-card animate fade delay-3">
+                    <div class="about-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>3. Responsive</h3>
+                    <p>Tampilan menyesuaikan di desktop, tablet, dan smartphone.</p>
+                </div>
+                <div class="about-card animate fade delay-4">
+                    <div class="about-icon"><i class="fas fa-sync-alt"></i></div>
+                    <h3>4. Update Berkala</h3>
+                    <p>Konten dan fitur diupdate secara berkala.</p>
+                </div>
+                <div class="about-card animate fade delay-1">
+                    <div class="about-icon"><i class="fas fa-search"></i></div>
+                    <h3>5. Pencarian Cerdas</h3>
+                    <p>Sistem pencarian advanced untuk menemukan data.</p>
+                </div>
+                <div class="about-card animate fade delay-2">
+                    <div class="about-icon"><i class="fas fa-users"></i></div>
+                    <h3>6. Kolaborasi Tim</h3>
+                    <p>Fitur kolaborasi untuk bekerja bersama tim.</p>
+                </div>
+                <div class="about-card animate fade delay-3">
+                    <div class="about-icon"><i class="fas fa-comments"></i></div>
+                    <h3>7. User-Friendly</h3>
+                    <p>Antarmuka yang intuitif dan mudah digunakan.</p>
+                </div>
+                <div class="about-card animate fade delay-4">
+                    <div class="about-icon"><i class="fas fa-headset"></i></div>
+                    <h3>8. Support 24/7</h3>
+                    <p>Tim support siap membantu kapan saja.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team" class="team">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title animate fade">Tim Kami</h2>
+                <p class="section-subtitle animate fade delay-1">Anggota Kelompok</p>
+            </div>
+            <div class="team-intro animate fade delay-2">
+                <p class="team-group-name">Intelligence Creation Team</p>
+                <p style="color:#6b7280; font-size:0.85rem; margin-top:8px;">
+                    <i class="fas fa-camera" style="color:#7c3aed; margin-right:6px;"></i>
+                    Klik foto untuk mengupload gambar anggota tim
+                </p>
+            </div>
+
+            <div class="team-grid">
+
+                <!-- Member 1 -->
+                <div class="team-card animate fade delay-1" id="card-0">
+                    <div class="team-avatar" onclick="triggerUpload(0)" title="Klik untuk upload foto">
+                        <i class="fas fa-user avatar-icon" id="icon-0"></i>
+                        <img id="img-0" style="display:none;" alt="Firzatullah">
+                        <div class="avatar-hover-overlay"></div>
+                        <div class="upload-ring"></div>
+                    </div>
+                    <h3>Firzatullah Tri Ardana</h3>
+                    <p class="team-role">Project Leader</p>
+                    <input type="file" class="team-photo-input" id="input-0" accept="image/*"
+                        onchange="handleTeamPhoto(0, event)">
+                </div>
+
+                <!-- Member 2 -->
+                <div class="team-card animate fade delay-2" id="card-1">
+                    <div class="team-avatar" onclick="triggerUpload(1)" title="Klik untuk upload foto">
+                        <i class="fas fa-user avatar-icon" id="icon-1"></i>
+                        <img id="img-1" style="display:none;" alt="Ratu Rahma">
+                        <div class="avatar-hover-overlay"></div>
+                        <div class="upload-ring"></div>
+                    </div>
+                    <h3>Ratu Rahma Alya Darajati</h3>
+                    <p class="team-role">Designer</p>
+                    <input type="file" class="team-photo-input" id="input-1" accept="image/*"
+                        onchange="handleTeamPhoto(1, event)">
+                </div>
+
+                <!-- Member 3 -->
+                <div class="team-card animate fade delay-3" id="card-2">
+                    <div class="team-avatar" onclick="triggerUpload(2)" title="Klik untuk upload foto">
+                        <i class="fas fa-user avatar-icon" id="icon-2"></i>
+                        <img id="img-2" style="display:none;" alt="Garda Yuda">
+                        <div class="avatar-hover-overlay"></div>
+                        <div class="upload-ring"></div>
+                    </div>
+                    <h3>Garda Yuda Wijaksana</h3>
+                    <p class="team-role">Backend Developer</p>
+                    <input type="file" class="team-photo-input" id="input-2" accept="image/*"
+                        onchange="handleTeamPhoto(2, event)">
+                </div>
+
+                <!-- Member 4 -->
+                <div class="team-card animate fade delay-4" id="card-3">
+                    <div class="team-avatar" onclick="triggerUpload(3)" title="Klik untuk upload foto">
+                        <i class="fas fa-user avatar-icon" id="icon-3"></i>
+                        <img id="img-3" style="display:none;" alt="Ahmad Ibnu">
+                        <div class="avatar-hover-overlay"></div>
+                        <div class="upload-ring"></div>
+                    </div>
+                    <h3>Ahmad Ibnu Bahtuta</h3>
+                    <p class="team-role">Frontend Developer</p>
+                    <input type="file" class="team-photo-input" id="input-3" accept="image/*"
+                        onchange="handleTeamPhoto(3, event)">
+                </div>
+
+                <!-- Member 5 -->
+                <div class="team-card animate fade delay-5" id="card-4">
+                    <div class="team-avatar" onclick="triggerUpload(4)" title="Klik untuk upload foto">
+                        <i class="fas fa-user avatar-icon" id="icon-4"></i>
+                        <img id="img-4" style="display:none;" alt="Turke">
+                        <div class="avatar-hover-overlay"></div>
+                        <div class="upload-ring"></div>
+                    </div>
+                    <h3>Turke</h3>
+                    <p class="team-role">Quality Assurance</p>
+                    <input type="file" class="team-photo-input" id="input-4" accept="image/*"
+                        onchange="handleTeamPhoto(4, event)">
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title animate fade">Hubungi Kami</h2>
+                <p class="section-subtitle animate fade delay-1">Punya pertanyaan? Hubungi kami</p>
+            </div>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-item animate left delay-2">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h4>Email</h4>
+                            <p>info@intelligencecreation.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item animate left delay-3">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h4>Telepon</h4>
+                            <p>+62 812 3456 7890</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form animate right delay-4">
+                    <input type="text" placeholder="Nama Lengkap" required>
+                    <input type="email" placeholder="Email" required>
+                    <textarea placeholder="Pesan Anda" rows="5" required></textarea>
+                    <button type="submit" class="btn btn-primary btn-animate">
+                        <i class="fas fa-paper-plane"></i> Kirim Pesan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">
+                    <img src="{% static 'sequence/ezgif-frame-001.jpg' %}" class="sequence-logo" alt="Logo"
+                        style="width: 40px; height: 40px; border-radius: 50%;">
+                    <span>Intelligence Creation</span>
+                </div>
+                <p>Platform kecerdasan buatan modern.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Quick Links</h4>
+                <a href="#home" class="footer-link">Home</a>
+                <a href="#about" class="footer-link">About</a>
+                <a href="#team" class="footer-link">Team</a>
+                <a href="/login.html" class="footer-link">Sign In</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Intelligence Creation. Dibuat dengan 🧠 dan ❤️</p>
+        </div>
+    </footer>
+
+    <!-- Toast container -->
+    <div class="ic-toast" id="ic-toast"></div>
+
+    <script src="{% static 'script.js' %}"></script>
+    <script>
+        // ============================================================
+        // TEAM PHOTO UPLOAD
+        // ============================================================
+        const STORAGE_KEY = 'ic_team_photos';
+
+        function triggerUpload(index) {
+            document.getElementById('input-' + index).click();
+        }
+
+        function handleTeamPhoto(index, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate
+            if (!file.type.startsWith('image/')) {
+                showIcToast('File harus berupa gambar (JPG, PNG, dll)', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showIcToast('Ukuran file maksimal 5MB', 'error');
+                return;
+            }
+
+            // Show loading
+            const avatar = document.querySelector('#card-' + index + ' .team-avatar');
+            avatar.classList.add('uploading');
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                // Small artificial delay for smooth UX
+                setTimeout(() => {
+                    setTeamPhoto(index, e.target.result);
+                    avatar.classList.remove('uploading');
+                    saveTeamPhotos();
+                    showIcToast('Foto berhasil diupload! 🎉', 'success');
+                }, 400);
+            };
+            reader.readAsDataURL(file);
+
+            // Reset input so same file can be picked again
+            event.target.value = '';
+        }
+
+        function setTeamPhoto(index, dataUrl) {
+            const img = document.getElementById('img-' + index);
+            const icon = document.getElementById('icon-' + index);
+            const card = document.getElementById('card-' + index);
+
+            img.src = dataUrl;
+            img.style.display = 'block';
+            img.style.position = 'absolute';
+            img.style.inset = '0';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '50%';
+
+            icon.style.display = 'none';
+            card.classList.add('has-photo');
+        }
+
+        function removePhoto(index, event) {
+            event.stopPropagation();
+
+            const img = document.getElementById('img-' + index);
+            const icon = document.getElementById('icon-' + index);
+            const card = document.getElementById('card-' + index);
+
+            img.src = '';
+            img.style.display = 'none';
+            icon.style.display = 'block';
+            card.classList.remove('has-photo');
+
+            saveTeamPhotos();
+            showIcToast('Foto dihapus', 'success');
+        }
+
+        function saveTeamPhotos() {
+            const photos = {};
+            for (let i = 0; i < 5; i++) {
+                const img = document.getElementById('img-' + i);
+                if (img && img.src && img.src.startsWith('data:')) {
+                    photos[i] = img.src;
+                }
+            }
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(photos)); } catch (e) { }
+        }
+
+        function loadTeamPhotos() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (!saved) return;
+                const photos = JSON.parse(saved);
+                Object.keys(photos).forEach(index => {
+                    if (photos[index]) setTeamPhoto(parseInt(index), photos[index]);
+                });
+            } catch (e) { }
+        }
+
+        function showIcToast(msg, type) {
+            const container = document.getElementById('ic-toast');
+            const el = document.createElement('div');
+            el.className = 'ic-toast-item ' + (type || 'success');
+            el.innerHTML = (type === 'success' ? '✓ ' : '✕ ') + msg;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 3200);
+        }
+
+        // Load saved photos on page load
+        document.addEventListener('DOMContentLoaded', loadTeamPhotos);
+    </script>
+</body>
+
+</html>
